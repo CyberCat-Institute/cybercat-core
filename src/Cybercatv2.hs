@@ -49,6 +49,8 @@ lift f = Monocle (iso f (. f))
 
 instance Arrow Monocle where
   arr f = Monocle (iso f (\k -> unsafeCoerce . k . f))
+  -- this loops the typechecker in ghc 9.0.2
+  first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (\c -> fmap (fst .) _)))
   --first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (fmap (. (, z)) . k . (, z)) x))
   --first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (\c -> fmap (fst .) (fmap (. (, z)) (k (c, z)))) x))
   --first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (fmap (\f c -> fst (f (c, z))) . k . (, z)) x))
