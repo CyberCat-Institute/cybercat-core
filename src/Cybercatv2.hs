@@ -35,8 +35,8 @@ type family Reverse x
 
 type instance Reverse (x <| r) = r
 
-type instance Reverse (x, y) = Reverse x
---type instance Reverse (x, y) = (Reverse x, Reverse y)
+--type instance Reverse (x, y) = Reverse x
+type instance Reverse (x, y) = (Reverse x, Reverse y)
 
 data Monocle x y = Monocle (Lens x (x -> Reverse x) y (y -> Reverse y))
 
@@ -47,9 +47,15 @@ instance Category Monocle where
 lift :: (Reverse x ~ Reverse y) => (x -> y) -> Monocle x y
 lift f = Monocle (iso f (. f))
 
+bilift :: (x -> y) -> (Reverse y -> Reverse x) -> Monocle x y
+bilift f g = Monocle (iso f (\k -> g . k . f))
+
+--first :: Monocle x y -> Monocle (x, z) (y, z)
+--first (Monocle l) = Monocle (\k (x, z) -> fmap undefined (l (fmap (\f -> fst . f . (, z)) . k . (, z)) x))
+
 instance Arrow Monocle where
   arr f = Monocle (iso f (\k -> unsafeCoerce . k . f))
-  first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (fmap (. (, z)) . k . (, z)) x))
+  --first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (fmap (. (, z)) . k . (, z)) x))
   --first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (\c -> fmap (fst .) (fmap (. (, z)) (k (c, z)))) x))
   --first (Monocle l) = Monocle (\k (x, z) -> fmap (. fst) (l (fmap (\f c -> fst (f (c, z))) . k . (, z)) x))
 
@@ -71,7 +77,7 @@ foo = proc profile -> do
   b <- argmax Player2 [Cooperate,Defect]  -< fmap snd profile
   u <- lift pdPayoffs -< pair (a, b)
   costate -< u
-
+{-}
 foo_zero :: Monocle ((PDMove, PDMove) <| Bool) (() <| ())
 foo_zero = line1
        >>> line2
@@ -86,30 +92,37 @@ foo_zero = line1
 
 line1 :: Monocle ((PDMove, PDMove) <| Bool)
                 (((PDMove, PDMove) <| Bool), ((PDMove, PDMove) <| Bool))
+--                ((PDMove, PDMove), (PDMove, PDMove)) <| Bool
 line1 = lift (\profile -> (profile, profile))
 
 line2 :: Monocle (((PDMove, PDMove) <| Bool), ((PDMove, PDMove) <| Bool))
                  (PDMove <| Bool, ((PDMove, PDMove) <| Bool))
+--               (PDMove, (PDMove, PDMove)) <| Bool
 line2 = first (lift (fmap fst))
 
 line3 :: Monocle (PDMove <| Bool, ((PDMove, PDMove) <| Bool))
                  (PDMove <| Payoffs, ((PDMove, PDMove) <| Bool))
+--               (PDMove, (PDMove, PDMove)) <| Payoffs
 line3 = first (argmax Player1 [Cooperate, Defect])
 
 line4 :: Monocle (PDMove <| Payoffs, ((PDMove, PDMove) <| Bool))
                  ((PDMove, PDMove) <| Bool, ((PDMove, PDMove) <| Bool, PDMove <| Payoffs))
+--               ((PDMove, PDMove), (PDMove, PDMove), PDMove) <| Bool
 line4 = arr (\(a, profile) -> (profile, (profile, a)))
 
 line5 :: Monocle ((PDMove, PDMove) <| Bool, ((PDMove, PDMove) <| Bool, PDMove <| Payoffs))
                  (PDMove <| Bool, ((PDMove, PDMove) <| Bool, PDMove <| Payoffs))
+--               (PDMove, (PDMove, PDMove), PDMove) <| Bool
 line5 = first (lift (fmap snd))
 
 line6 :: Monocle (PDMove <| Bool, ((PDMove, PDMove) <| Bool, PDMove <| Payoffs))
                  (PDMove <| Payoffs, (((PDMove, PDMove) <| Bool), PDMove <| Payoffs))
+--               (PDMove, (PDMove, PDMove), PDMove) <| Payoffs
 line6 = first (argmax Player2 [Cooperate, Defect])
 
 line7 :: Monocle (PDMove <| Payoffs, (((PDMove, PDMove) <| Bool), PDMove <| Payoffs))
                  (PDMove <| Payoffs, PDMove <| Payoffs)
+--               (PDMove, PDMove) <| Payoffs
 line7 = lift (\(b, (profile, a)) -> (a, b))
 
 line8 :: Monocle (PDMove <| Payoffs, PDMove <| Payoffs)
@@ -123,3 +136,4 @@ line9 = lift pdPayoffs
 line10 :: Monocle (Payoffs <| Payoffs)
                   (() <| ())
 line10 = costate
+-}
