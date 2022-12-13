@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Cybercat, Cybercatv2, Cybercatv3, Cybercatv4, Cybercatv5
+  exposed-modules:     Cybercat.Core, Cybercat.Lens, Cybercat.SimpleGames, Cybercat.Examples.SimpleGames
   build-depends:       base >= 4.7 && < 5, contravariant, lens
   default-language:    Haskell2010
 
