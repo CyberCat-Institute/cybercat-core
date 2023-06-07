@@ -15,7 +15,9 @@ class RightModule m f where
 instance (Monad m) => RightModule m m where
     act = join
 
--- We need IncoherentInstances because (Const a) is also a Monad
+-- We need IncoherentInstances for this
+-- I *think* because ghc can't figure out that Monad (Const a) can't be true
+-- So I *think* this is the mythical safe usage of IncoherentInstances
 instance RightModule m (Const a) where
     act = Const . getConst
 
