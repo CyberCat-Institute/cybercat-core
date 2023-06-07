@@ -39,8 +39,8 @@ intPut :: Int s t a b -> s -> b -> t
 intPut f s b = runIdentity (f (const (Identity b)) s)
 
 int :: (s -> b -> a) -> (s -> b -> t) -> Int s t a b
-int f g k s = let a = f s (extract (k a)) 
-               in fmap (g s) (k a)
+int f g k s = let fb = k (f s (extract fb))
+               in fmap (g s) fb
 
 g1 (x, y, z) _ = (x, y)
 p1 (x, y, z) (x', y') = (x', y', z)
