@@ -45,7 +45,8 @@ instance (Monad m) => Distributive m (Const (m a)) where
 
 -- Distributive law of a monad over its underlying functor!
 instance (Monad m) => Distributive m m where
-  distribute = pure . join
+--  distribute = pure . join
+  distribute = fmap pure . join
 
 type KleisliOptic m s t a b = forall f. (Functor f, RightModule m f, Distributive m f) 
                                      => LensLike f s t a b
@@ -58,27 +59,22 @@ kleisliPut l s b = l (const (pure b)) s
 
 kleisliOptic :: (Monad m) => ExistentialKleisliOptic m s t a b -> KleisliOptic m s t a b
 kleisliOptic (ExistentialKleisliOptic g p) k s
-  = act $ fmap p' $ distribute $ do (a, z) <- g s
-                                    pure (fmap (, z) (k a))
-  where p' bz = do (b, z) <- bz
-                   p z b
+  = act $ fmap (>>= (uncurry p)) $ distribute $ do (a, z) <- g s
+                                                   pure (fmap (z, ) (k a))
 
-data Residual m z a b t = Residual {
-  residualGet :: m (a, z),
-  residualPut :: z -> b -> m t}
+data Monomial m a b x = Monomial {runMonomial :: m (a, b -> m x)}
   deriving (Functor)
 
-instance (Monad m) => RightModule m (Residual m z a b) where
-  act (Residual g p) = Residual g (\z b -> join (p z b))
+instance (Monad m) => RightModule m (Monomial m a b) where
+  act (Monomial af) = Monomial $ do (a, f) <- af
+                                    pure (a, join . f)
 
-instance (Monad m) => Distributive m (Residual m z a b) where
-  distribute gp = Residual (do Residual g p <- gp
-                               (a, z) <- g
-                               return (a, z)) 
-                           (\z b -> do Residual g p <- gp
-                                       pure (p z b))
+instance (Monad m) => Distributive m (Monomial m a b) where
+  distribute maf = Monomial $ do Monomial af <- maf
+                                 (a, f) <- af
+                                 pure (a, pure . f)
 
 unKleisliOptic :: (Monad m) => KleisliOptic m s t a b -> ExistentialKleisliOptic m s t a b
 unKleisliOptic l = ExistentialKleisliOptic 
-  (\s -> residualGet  (l (\a -> Residual (pure (a, s)) (const pure)) s)) 
-  (\s b -> residualPut (l (const (Residual (pure ((), s)) (const pure))) s) s b)
+  (runMonomial . l (\a -> Monomial (pure (a, pure))))
+  ($)
